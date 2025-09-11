@@ -245,12 +245,12 @@ def get_stock_metrics(stock_code):
         symbols_to_try.append(f"SH{stock_code}")
     elif stock_code.startswith('8'):
         symbols_to_try.append(f"BJ{stock_code}")
-        symbols_to_try.append(f"SZ{stock_code}")
-        symbols_to_try.append(f"SH{stock_code}")
+        # symbols_to_try.append(f"SZ{stock_code}")
+        # symbols_to_try.append(f"SH{stock_code}")
     else:
         symbols_to_try.append(f"SH{stock_code}")
-        symbols_to_try.append(f"SZ{stock_code}")
-        symbols_to_try.append(f"BJ{stock_code}")
+        # symbols_to_try.append(f"SZ{stock_code}")
+        # symbols_to_try.append(f"BJ{stock_code}")
     
     # 尝试获取股票指标数据
     for symbol in symbols_to_try:
@@ -264,13 +264,13 @@ def get_stock_metrics(stock_code):
             pb_ratio = float(data_dict.get('市净率', np.nan))
             stockname = str(data_dict.get('名称', np.nan))
             
-            
+            time.sleep(0.5)
             return pe_ratio, dividend_yield, pb_ratio, stockname
         except:
             continue
         
         # 添加短暂延迟
-        time.sleep(0.1)
+        time.sleep(0.5)
     
     return np.nan, np.nan, np.nan, np.nan
 
@@ -304,7 +304,7 @@ def append_pb():
         # 尝试获取股票指标数据
         pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)
         
-        for i_retry in range(3):
+        for i_retry in range(2):
             if stock_code.startswith('8') or stock_code.startswith('4') or stock_code.startswith('9') :
                 pass
             else:
