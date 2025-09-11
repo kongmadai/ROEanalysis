@@ -1,0 +1,49 @@
+name: Run ROE Analysis # 工作流的名称
+
+on:
+  schedule:
+    # 使用cron语法设置定时任务
+    - cron: '0 3 * * *' # 注意：GitHub Actions的定时任务使用UTC时间:
+      timezone: 'Asia/Shanghai' # 设置时区为北京时间
+#  push:
+#    branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
+#  pull_request:
+#    branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
+
+jobs:
+  run-roe:
+    runs-on: ubuntu-latest # 使用最新版本的Ubuntu运行器
+
+    steps:
+    # 1. 检出仓库代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. 设置Python环境
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # 或者你需要的其他版本，例如'3.10'
+
+    # 3. 安装依赖（如果你的项目有requirements.txt，这一步很重要）
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        # 如果ROE.py依赖其他库，请在此安装，例如：
+        pip install akshare pandas numpy
+        # 或者，如果你有requirements.txt文件：
+        # pip install -r requirements.txt
+
+    # 4. 运行你的Python脚本
+    - name: Run ROE analysis
+      run: |
+        python code/ROEselection.py # 根据你的实际路径调整
+
+    # 5. （可选）如果脚本生成输出文件，你可以在此步骤中上传它们作为制品(artifacts)
+    - name: Upload output artifacts
+      if: always() # 即使上一步失败也上传
+      uses: actions/upload-artifact@v4
+      with:
+        name: roe-output
+        path: | # 指定你的输出文件路径，例如code目录下的output.log或result.csv
+          code/stock_analysis_results.txt
