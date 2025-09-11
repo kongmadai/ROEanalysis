@@ -55,7 +55,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: roe-results-$(date -u +"%Y-%m-%d")
-        name: "ROE分析结果 $(date -u +"%Y-%m-%d")"
+        name: ROE分析结果 $(date -u +"%Y-%m-%d")
         files: stock_analysis_results.txt
         body: |
           自动生成的ROE股票分析结果
