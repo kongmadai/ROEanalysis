@@ -255,6 +255,7 @@ def get_stock_metrics(stock_code):
     # 尝试获取股票指标数据
     for symbol in symbols_to_try:
         try:
+            print(f"当前尝试 {symbol}  ")
             stock_individual_spot_xq_df = ak.stock_individual_spot_xq(symbol=symbol)
             data_dict = dict(zip(stock_individual_spot_xq_df['item'], stock_individual_spot_xq_df['value']))
             
@@ -304,9 +305,10 @@ def append_pb():
         pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)
         
         for i_retry in range(3):
-            if stock_code.startswith('8'):
+            if stock_code.startswith('8') or stock_code.startswith('4') or stock_code.startswith('9') :
                 pass
             else:
+                print(f"再试一次")
                 if pe_ratio is np.nan:
                     time.sleep(0.1)
                     pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)

@@ -2,9 +2,8 @@ name: Run ROE Analysis # 工作流的名称
 
 on:
   schedule:
-    # 使用cron语法设置定时任务
-    - cron: '0 3 * * *' # 注意：GitHub Actions的定时任务使用UTC时间:
-      timezone: 'Asia/Shanghai' # 设置时区为北京时间
+    # 每周二和周四北京时间凌晨2点运行 (UTC时间周二和周三18:00)
+    - cron: '0 18 * * 2,4' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
   push:
     branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
 #  pull_request:
@@ -18,6 +17,8 @@ jobs:
     # 1. 检出仓库代码
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # 获取所有历史记录，便于创建Release
 
     # 2. 设置Python环境
     - name: Set up Python
@@ -45,5 +46,26 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: roe-output
-        path: | # 指定你的输出文件路径，例如code目录下的output.log或result.csv
-          code/stock_analysis_results.txt
+        path: | # 指定你的输出文件路径，例如code目录下的output.log或result.csv  这个文件会输出到artifacts的结果。文件可以是code\result.csv
+          stock_analysis_results.txt
+
+    # 6. 创建或覆盖Release（新增的核心步骤）
+    - name: Create/Update Daily Release
+      if: success() # 只有Python脚本成功运行时才创建Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: roe-results-$(date -u +"%Y-%m-%d")
+        name: "ROE分析结果 $(date -u +"%Y-%m-%d")"
+        files: stock_analysis_results.txt
+        body: |
+          自动生成的ROE股票分析结果
+          
+          **生成时间**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          **分析周期**: 每周二、四定期更新
+          
+          包含沪深市场ROE筛选的优质股票列表，按性价比排序。
+        overwrite: true # 允许覆盖同标签的Release
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
