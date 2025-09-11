@@ -264,7 +264,7 @@ def get_stock_metrics(stock_code):
             pb_ratio = float(data_dict.get('市净率', np.nan))
             stockname = str(data_dict.get('名称', np.nan))
             
-            time.sleep(0.5)
+            # time.sleep(0.1)
             return pe_ratio, dividend_yield, pb_ratio, stockname
         except:
             continue
@@ -308,9 +308,9 @@ def append_pb():
             if stock_code.startswith('8') or stock_code.startswith('4') or stock_code.startswith('9') :
                 pass
             else:
-                print(f"再试一次")
                 if pe_ratio is np.nan:
-                    time.sleep(0.1)
+                    print(f"再试一次")
+                    time.sleep(0.5)
                     pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)
                 
         
