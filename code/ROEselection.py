@@ -28,6 +28,8 @@ pip install akshare numpy
 import akshare as ak
 import time
 import numpy as np
+import concurrent.futures
+import threading
 
 def get_ROE(date="20221231", max_retries=10):
     """
@@ -134,6 +136,8 @@ def get_multi_year_ROE():
             pass
         elif stock_code.startswith('9'):
             pass
+        elif stock_code.startswith('4'):
+            pass
         else:
             result_dict_[stock_code] = result_dict[stock_code]
             
@@ -169,22 +173,22 @@ def clean_data_ROE_v2():
         # 重新计算平均值（使用所有可用年份）
         avg_roe = sum(valid_values) / len(valid_values)
         
-        '''# 条件1：平均值必须大于2%
+        '''# 条件1：平均值必须大于1%
         '''
-        if avg_roe <= 2:
+        if avg_roe <= 1:
             continue
 
         
-        '''# 计算最小值  必须大于0
+        '''# 计算最小值  必须大于-5%
         '''
         min_roe = min(valid_values)
         
-        if min_roe <= 0:
+        if min_roe <= -5:
             continue
         
         '''# 条件2：最小值乘以80必须大于平均值
         '''
-        if min_roe * 80 > avg_roe:
+        if abs(min_roe) * 80 > avg_roe or min_roe * 80 > avg_roe :
             # 创建新的ROE列表，包含原始数据和重新计算的平均值
             new_roe_list = roe_list.copy()
             new_roe_list[-1] = avg_roe  # 更新平均值
@@ -194,19 +198,19 @@ def clean_data_ROE_v2():
     print(f"筛选后股票数量: {len(filtered_data)}")
     
     # 统计有效数据年数分布
-    year_distribution = {}
-    for roe_list in filtered_data.values():
-        valid_count = sum(1 for x in roe_list[:5] if not np.isnan(x))
-        year_distribution[valid_count] = year_distribution.get(valid_count, 0) + 1
+    # year_distribution = {}
+    # for roe_list in filtered_data.values():
+    #     valid_count = sum(1 for x in roe_list[:5] if not np.isnan(x))
+    #     year_distribution[valid_count] = year_distribution.get(valid_count, 0) + 1
     
-    print(f"\n有效数据年数分布:")
-    for years, count in sorted(year_distribution.items()):
-        print(f"  {years}年有效数据: {count}只股票 ({count/len(filtered_data)*100:.1f}%)")
+    # print(f"\n有效数据年数分布:")
+    # for years, count in sorted(year_distribution.items()):
+    #     print(f"  {years}年有效数据: {count}只股票 ({count/len(filtered_data)*100:.1f}%)")
     
     return filtered_data, len(multi_year_roe), len(filtered_data)
 
 
-def get_hangye(stock_code="000001"):
+def get_hangye(stock_code="000001"):#行业
     try:
         stock_individual_info_em_df = ak.stock_individual_info_em(stock_code)
         print(stock_individual_info_em_df)
@@ -240,13 +244,17 @@ def get_stock_metrics(stock_code):
     if stock_code.startswith('6'):
         symbols_to_try.append(f"SH{stock_code}")
         symbols_to_try.append(f"SZ{stock_code}")
+        symbols_to_try.append(f"SH{stock_code}")
+        symbols_to_try.append(f"SZ{stock_code}")
     elif stock_code.startswith(('0', '3')):
+        symbols_to_try.append(f"SZ{stock_code}")
+        symbols_to_try.append(f"SH{stock_code}")
         symbols_to_try.append(f"SZ{stock_code}")
         symbols_to_try.append(f"SH{stock_code}")
     elif stock_code.startswith('8'):
         symbols_to_try.append(f"BJ{stock_code}")
-        # symbols_to_try.append(f"SZ{stock_code}")
-        # symbols_to_try.append(f"SH{stock_code}")
+        symbols_to_try.append(f"SZ{stock_code}")
+        symbols_to_try.append(f"SH{stock_code}")
     else:
         symbols_to_try.append(f"SH{stock_code}")
         # symbols_to_try.append(f"SZ{stock_code}")
@@ -264,15 +272,22 @@ def get_stock_metrics(stock_code):
             pb_ratio = float(data_dict.get('市净率', np.nan))
             stockname = str(data_dict.get('名称', np.nan))
             
-            # time.sleep(0.1)
+            time.sleep(0.1)
             return pe_ratio, dividend_yield, pb_ratio, stockname
         except:
             continue
         
         # 添加短暂延迟
-        time.sleep(0.5)
+        time.sleep(0.1)
     
     return np.nan, np.nan, np.nan, np.nan
+
+
+def get_stock_metrics_wrapper(stock_code):
+    """
+    包装函数，用于线程池调用
+    """
+    return stock_code, get_stock_metrics(stock_code)
 
 
 def append_pb():
@@ -298,40 +313,46 @@ def append_pb():
     success_count = 0
     fail_count = 0
     
-    for stock_code, roe_list in filtered_data.items():
-        
-        print(f"\n成功 {success_count} 只股票 失败 {fail_count} 只股票 ... 当前匹配{stock_code}")
-        # 尝试获取股票指标数据
-        pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)
-        
-        for i_retry in range(1):
-            if stock_code.startswith('8') or stock_code.startswith('4') or stock_code.startswith('9') :
-                pass
-            else:
-                if pe_ratio is np.nan:
-                    print(f"再试一次")
-                    time.sleep(0.5)
-                    pe_ratio, dividend_yield, pb_ratio, stockname = get_stock_metrics(stock_code)
-                
-        
-        if pe_ratio is np.nan:
-            print(f">>>>>>>>>>>>>>>>>>>>>>>>无法获取股票 {stock_code} 的数据")
-            fail_count += 1
-            continue
-        if dividend_yield is np.nan:
-            print(f">>>>>>>>>>>>>>>>>>>>>>>>无法获取股票 {stock_code} 的数据")
-            fail_count += 1
-            continue
-        if pb_ratio is np.nan:
-            print(f">>>>>>>>>>>>>>>>>>>>>>>>无法获取股票 {stock_code} 的数据")
-            fail_count += 1
-            continue
-        if stockname is np.nan:
-            print(f">>>>>>>>>>>>>>>>>>>>>>>>无法获取股票 {stock_code} 的数据")
-            fail_count += 1
-            continue
+    # 使用线程池并发获取股票指标
+    stock_codes = list(filtered_data.keys())
+    results = {}
     
+    # 创建线程池，最大线程数为20
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        # 提交所有任务
+        future_to_stock = {executor.submit(get_stock_metrics_wrapper, code): code for code in stock_codes}
         
+        # 处理完成的任务
+        for future in concurrent.futures.as_completed(future_to_stock):
+            stock_code = future_to_stock[future]
+            try:
+                result_code, (pe_ratio, dividend_yield, pb_ratio, stockname) = future.result()
+                results[stock_code] = (pe_ratio, dividend_yield, pb_ratio, stockname)
+                
+                # 更新计数
+                if not np.isnan(pe_ratio) and not np.isnan(dividend_yield) and not np.isnan(pb_ratio) and not np.isnan(stockname):
+                    success_count += 1
+                else:
+                    fail_count += 1
+                    
+                print(f"\n成功 {success_count} 只股票 失败 {fail_count} 只股票 ... 当前处理 {stock_code}")
+                
+            except Exception as e:
+                print(f"处理股票 {stock_code} 时出错: {str(e)}")
+                results[stock_code] = (np.nan, np.nan, np.nan, np.nan)
+                fail_count += 1
+    
+    # 处理获取到的指标数据
+    for stock_code, roe_list in filtered_data.items():
+        if stock_code not in results:
+            continue
+            
+        pe_ratio, dividend_yield, pb_ratio, stockname = results[stock_code]
+        
+        # 检查数据有效性
+        if np.isnan(pe_ratio) or np.isnan(dividend_yield) or np.isnan(pb_ratio) or np.isnan(stockname):
+            continue
+            
 #  ak.stock_individual_spot_xq('SZ002681')
 # Out[8]: 
 #         item                value
@@ -374,12 +395,7 @@ def append_pb():
 # 36        今开                 7.39   
     
     
-    
-    
-    
-    
         try:
-            
             # 提取所需指标
             # pe_ratio = float(data_dict.get('市盈率(动)', np.nan))  # 市盈率(动)
             # dividend_yield = float(data_dict.get('股息率(TTM)', np.nan))  # 股息率(TTM)
@@ -397,19 +413,12 @@ def append_pb():
             else:
                 value_ratio = np.nan
                 
-                
-                
-            
             # 创建新的数据列表（原ROE数据 + 新指标）
             enhanced_list = roe_list.copy()
             enhanced_list.extend([pe_ratio, dividend_yield, pb_ratio, value_ratio, stockname])
             
             # 添加到结果字典
-            if value_ratio is np.nan:
-                pass
-            else:
-                
-                
+            if not np.isnan(value_ratio):
                 '''       
                 # 市盈率 小于 200 
                 # 股息率 大于 0.1%  
@@ -417,20 +426,17 @@ def append_pb():
                 
                 if pe_ratio < 200 and dividend_yield > 0.1 and pb_ratio < 33:
                     enhanced_data[stock_code] = enhanced_list
-                    success_count += 1
-                    print(f"累计 {success_count} 符合标准: 最新的是{stockname}")
+                    print(f"累计 {len(enhanced_data)} 符合标准: 最新的是{stockname}")
                     
                     # if success_count > 20:
                     #     return enhanced_data, len(filtered_data), success_count
             
         except Exception as e:
             print(f"处理股票 {stock_code} 时出错: {str(e)}")
-            fail_count += 1
             continue
-        
 
+    success_count = len(enhanced_data)
     return enhanced_data, len(filtered_data), success_count
-
 
 
 # 使用示例 - 详细版本

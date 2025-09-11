@@ -61,10 +61,10 @@ jobs:
           自动生成的ROE股票分析结果
           
           **生成时间**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          **分析周期**: 每周二、四定期更新
+          **分析周期**: 每周*定期更新
           
           包含沪深市场ROE筛选的优质股票列表，按性价比排序。
-        overwrite: true # 允许覆盖同标签的Release
+        # overwrite: true # 允许覆盖同标签的Release
         draft: false
         prerelease: false
       env:
