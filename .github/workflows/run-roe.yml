@@ -5,8 +5,8 @@ on:
     # 使用cron语法设置定时任务
     - cron: '0 3 * * *' # 注意：GitHub Actions的定时任务使用UTC时间:
       timezone: 'Asia/Shanghai' # 设置时区为北京时间
-#  push:
-#    branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
+  push:
+    branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
 #  pull_request:
 #    branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
 
