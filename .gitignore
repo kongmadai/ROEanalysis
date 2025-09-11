@@ -1,3 +1,18 @@
+# 忽略所有Python编译生成的.pyc文件
+*.pyc:cite[2]:cite[6]
+# 忽略Python的__pycache__目录
+__pycache__/:cite[2]
+# 如果你使用虚拟环境，忽略整个虚拟环境目录（例如venv/, env/）
+venv/
+env/
+# 忽略IDE或编辑器生成的配置文件（例如PyCharm的.idea目录）
+.idea/
+.vscode/
+# 忽略可能包含敏感信息的文件（如API密钥）
+config.py
+secrets.py
+*.key
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
