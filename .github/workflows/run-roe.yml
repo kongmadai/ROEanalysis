@@ -3,17 +3,16 @@ name: Run ROE Analysis # 工作流的名称
 on:
   schedule:
     # 每周二和周四北京时间凌晨2点运行 (UTC时间周二和周三18:00)
-    - cron: '0 18 * * 2,4' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
-  push:
-     branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
-#  pull_request:
-#    branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
+    - cron: '0 18 * * 1,2,3,4,7' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
+  # push:
+     # branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
+  # pull_request:
+  #   branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
   workflow_dispatch:  # 添加手动触发功能
 
 # 设置全局权限
 permissions:
   contents: write
-  
   
 jobs:
   run-roe:
@@ -60,11 +59,26 @@ jobs:
         path: | # 指定你的输出文件路径，例如code目录下的output.log或result.csv  这个文件会输出到artifacts的结果。文件可以是code\result.csv
           stock_analysis_results.txt
           
-    - name: Debug - Check current directory and list files
-      run: |
-        pwd
-        ls -la
-        find . -name "stock_analysis_results.txt" -type f
+    # - name: Debug - Check current directory and list files
+    #   run: |
+    #     pwd
+    #     ls -la
+    #     find . -name "stock_analysis_results.txt" -type f
+        
+    #     得到的结果是在root目录
+# Run pwd
+# /home/runner/work/ROEanalysis/ROEanalysis
+# total 72
+# drwxr-xr-x 5 runner runner  4096 Sep 12 01:04 .
+# drwxr-xr-x 3 runner runner  4096 Sep 12 01:03 ..
+# drwxr-xr-x 7 runner runner  4096 Sep 12 01:03 .git
+# drwxr-xr-x 3 runner runner  4096 Sep 12 01:03 .github
+# -rw-r--r-- 1 runner runner  5091 Sep 12 01:03 .gitignore
+# -rw-r--r-- 1 runner runner 35149 Sep 12 01:03 LICENSE
+# -rw-r--r-- 1 runner runner    50 Sep 12 01:03 README.md
+# drwxr-xr-x 2 runner runner  4096 Sep 12 01:03 code
+# -rw-r--r-- 1 runner runner    60 Sep 12 01:04 stock_analysis_results.txt
+# ./stock_analysis_results.txt
 
     # 6. 创建或覆盖Release（新增的核心步骤）
     - name: Create/Update Daily Release
@@ -79,7 +93,7 @@ jobs:
           生成时间: ${{ steps.get-date.outputs.date }}
           分析周期: 每周定期更新
           包含沪深市场ROE筛选的优质股票列表，按性价比排序。
-        # overwrite: true # 允许覆盖同标签的Release
+        # overwrite: true # 允许覆盖同标签的Release  这个overwrite参数不支持
         draft: false
         prerelease: false
       env:
