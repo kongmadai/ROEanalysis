@@ -336,7 +336,7 @@ def append_pb():
     results = {}
     
     # 创建线程池，最大线程数为20
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
         # 提交所有任务
         future_to_stock = {executor.submit(get_stock_metrics_wrapper, code): code for code in stock_codes}
         
