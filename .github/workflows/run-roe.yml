@@ -3,7 +3,7 @@ name: Run ROE Analysis # 工作流的名称
 on:
   schedule:
     # 每周二和周四北京时间凌晨2点运行 (UTC时间周二和周三18:00)
-    - cron: '0 18 * * 0,1,2,3,4' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
+    - cron: '0 18 * * 2,4' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
   # push:
      # branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
   # pull_request:

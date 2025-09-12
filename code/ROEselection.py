@@ -213,7 +213,7 @@ def clean_data_ROE_v2():
 def get_hangye(stock_code="000001"):#行业
     try:
         stock_individual_info_em_df = ak.stock_individual_info_em(stock_code)
-        print(stock_individual_info_em_df)
+        # print(stock_individual_info_em_df)
         data_dict = dict(zip(stock_individual_info_em_df['item'], stock_individual_info_em_df['value']))
 
         hangye = str(data_dict.get('行业', np.nan))
@@ -296,7 +296,7 @@ def get_stock_metrics(stock_code):
             continue
         
         # 添加短暂延迟
-        time.sleep(0.1)
+        time.sleep(1)
     
     return np.nan, np.nan, np.nan, np.nan
 
@@ -336,7 +336,7 @@ def append_pb():
     results = {}
     
     # 创建线程池，最大线程数为20
-    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor: # 太多 ， 20个， 会丢股票， 失败
         # 提交所有任务
         future_to_stock = {executor.submit(get_stock_metrics_wrapper, code): code for code in stock_codes}
         
