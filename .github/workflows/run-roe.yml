@@ -10,6 +10,11 @@ on:
 #    branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
   workflow_dispatch:  # 添加手动触发功能
 
+# 设置全局权限
+permissions:
+  contents: write
+  
+  
 jobs:
   run-roe:
     runs-on: ubuntu-latest # 使用最新版本的Ubuntu运行器
