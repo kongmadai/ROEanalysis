@@ -4,10 +4,11 @@ on:
   schedule:
     # 每周二和周四北京时间凌晨2点运行 (UTC时间周二和周三18:00)
     - cron: '0 18 * * 2,4' # 周二和周四 UTC 18:00 (对应北京时间周三和周五 2:00)
-  push:
-    branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
+   push:
+     branches: [ main ]  # 推送代码到main分支时也触发工作流（可选，用于测试）
 #  pull_request:
 #    branches: [ main ]  # 在main分支上创建Pull Request时触发（可选）
+   workflow_dispatch:  # 添加手动触发功能
 
 jobs:
   run-roe:
@@ -48,6 +49,12 @@ jobs:
         name: roe-output
         path: | # 指定你的输出文件路径，例如code目录下的output.log或result.csv  这个文件会输出到artifacts的结果。文件可以是code\result.csv
           stock_analysis_results.txt
+          
+    - name: Debug - Check current directory and list files
+      run: |
+        pwd
+        ls -la
+        find . -name "stock_analysis_results.txt" -type f
 
     # 6. 创建或覆盖Release（新增的核心步骤）
     - name: Create/Update Daily Release
@@ -61,7 +68,7 @@ jobs:
           自动生成的ROE股票分析结果
           
           **生成时间**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          **分析周期**: 每周*定期更新
+          **分析周期**: 每周定期更新
           
           包含沪深市场ROE筛选的优质股票列表，按性价比排序。
         # overwrite: true # 允许覆盖同标签的Release

@@ -225,7 +225,17 @@ def get_hangye(stock_code="000001"):#行业
     return np.nan
     
 
-# 如果需要，可以添加一个独立的函数来获取单只股票的指标
+def safe_convert(value, default=np.nan):
+    """
+    安全转换函数，处理None、字符串等非数值数据
+    """
+    try:
+        if value is None or value == 'None' or value == '' or str(value).strip() == '-':
+            return default
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 def get_stock_metrics(stock_code):
     """
     获取单只股票的市盈率、股息率和市净率
@@ -267,14 +277,22 @@ def get_stock_metrics(stock_code):
             stock_individual_spot_xq_df = ak.stock_individual_spot_xq(symbol=symbol)
             data_dict = dict(zip(stock_individual_spot_xq_df['item'], stock_individual_spot_xq_df['value']))
             
-            pe_ratio = float(data_dict.get('市盈率(动)', np.nan))
-            dividend_yield = float(data_dict.get('股息率(TTM)', np.nan))
-            pb_ratio = float(data_dict.get('市净率', np.nan))
-            stockname = str(data_dict.get('名称', np.nan))
+            # 使用安全转换函数处理数据
+            pe_ratio = safe_convert(data_dict.get('市盈率(动)', np.nan))
+            dividend_yield = safe_convert(data_dict.get('股息率(TTM)', np.nan))
+            pb_ratio = safe_convert(data_dict.get('市净率', np.nan))
+            
+            # 处理股票名称
+            stockname = data_dict.get('名称', '')
+            if stockname in [None, 'None', '']:
+                stockname = np.nan
+            else:
+                stockname = str(stockname)
             
             time.sleep(0.1)
             return pe_ratio, dividend_yield, pb_ratio, stockname
-        except:
+            
+        except Exception as e:
             continue
         
         # 添加短暂延迟
@@ -326,32 +344,41 @@ def append_pb():
         for future in concurrent.futures.as_completed(future_to_stock):
             stock_code = future_to_stock[future]
             try:
-                result_code, (pe_ratio, dividend_yield, pb_ratio, stockname) = future.result()
-                results[stock_code] = (pe_ratio, dividend_yield, pb_ratio, stockname)
-                
-                # 更新计数
-                if not np.isnan(pe_ratio) and not np.isnan(dividend_yield) and not np.isnan(pb_ratio) and not np.isnan(stockname):
-                    success_count += 1
-                else:
-                    fail_count += 1
-                    
-                print(f"\n成功 {success_count} 只股票 失败 {fail_count} 只股票 ... 当前处理 {stock_code}")
+                result_code, metrics = future.result()
+                results[stock_code] = metrics
+                print(f"已获取 {len(results)}/{len(stock_codes)} 只股票数据")
                 
             except Exception as e:
                 print(f"处理股票 {stock_code} 时出错: {str(e)}")
                 results[stock_code] = (np.nan, np.nan, np.nan, np.nan)
-                fail_count += 1
     
     # 处理获取到的指标数据
+    success_count = 0
     for stock_code, roe_list in filtered_data.items():
         if stock_code not in results:
             continue
             
         pe_ratio, dividend_yield, pb_ratio, stockname = results[stock_code]
         
-        # 检查数据有效性
-        if np.isnan(pe_ratio) or np.isnan(dividend_yield) or np.isnan(pb_ratio) or np.isnan(stockname):
+        # 检查数据有效性 - 修复：使用更安全的方式检查
+        def is_valid_numeric(value):
+            """检查数值是否有效"""
+            try:
+                return not np.isnan(float(value)) and float(value) > 0
+            except (ValueError, TypeError):
+                return False
+        
+        def is_valid_string(value):
+            """检查字符串是否有效"""
+            return value is not np.nan and value not in [None, 'None', ''] and isinstance(value, str)
+        
+        # 使用安全的检查方式
+        if (not is_valid_numeric(pe_ratio) or 
+            not is_valid_numeric(dividend_yield) or 
+            not is_valid_numeric(pb_ratio) or 
+            not is_valid_string(stockname)):
             continue
+
             
 #  ak.stock_individual_spot_xq('SZ002681')
 # Out[8]: 
@@ -407,7 +434,8 @@ def append_pb():
             
             '''# 计算性价比指标（平均ROE/6% / 市净率）+  动态市盈率的倒数 / 6%'''
             
-            if not np.isnan(pb_ratio) and pb_ratio > 0:
+            
+            if pb_ratio > 0:
                 # value_ratio = ( (avg_roe + recent_roe) /12 ) / pb_ratio
                 value_ratio = (avg_roe /12 )/ pb_ratio + (100 / pe_ratio) / 12
             else:
@@ -439,61 +467,69 @@ def append_pb():
     return enhanced_data, len(filtered_data), success_count
 
 
-# 使用示例 - 详细版本
-if __name__ == "__main__":
-    enhanced_data, original_count, success_count = append_pb()
+# # 使用示例 - 详细版本
+# if __name__ == "__main__":
+#     enhanced_data, original_count, success_count = append_pb()
     
-    if enhanced_data:
-        # 可以按性价比排序
-        sorted_stocks = sorted(
-            [(code, data[10]) for code, data in enhanced_data.items() if not np.isnan(data[10])],
-            key=lambda x: x[1],
-            reverse=True
-        )
+#     if enhanced_data:
+#         # 可以按性价比排序
+#         sorted_stocks = sorted(
+#             [(code, data[10]) for code, data in enhanced_data.items() if not np.isnan(data[10])],
+#             key=lambda x: x[1],
+#             reverse=True
+#         )
         
-        print(f"\n性价比最高的前100只股票:")
-        for i, (code, value_ratio) in enumerate(sorted_stocks[:100]):
-            print(f"{i+1}. {code}: {value_ratio:.3f}")
+#         print(f"\n性价比最高的前100只股票:")
+#         for i, (code, value_ratio) in enumerate(sorted_stocks[:100]):
+#             print(f"{i+1}. {code}: {value_ratio:.3f}")
         
-        # 输出到txt文件
-        output_filename = "stock_analysis_results.txt"
+#         # 输出到txt文件
+#         output_filename = "stock_analysis_results.txt"
         
-        with open(output_filename, 'w', encoding='utf-8') as f:
-            # 写入文件头信息
-            f.write("=" * 80 + "\n")
-            f.write("股票分析结果 - 按性价比排序\n")
-            f.write("=" * 80 + "\n")
-            f.write(f"分析时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"总股票数量: {original_count} (沪深: 持续五年盈利， 平均ROE大于3% )  \n")
-            f.write(f"筛选后股票数量: {len(enhanced_data)} (市盈率 小于 200 ; 股息率 大于 0.1% ;  市净率 小于33  ) \n")   
-            f.write(f"输出排名1500只股票\n")
-            f.write("=" * 80 + "\n\n")
+#         with open(output_filename, 'w', encoding='utf-8') as f:
+#             # 写入文件头信息
+#             f.write("=" * 80 + "\n")
+#             f.write("股票分析结果 - 按性价比排序\n")
+#             f.write("=" * 80 + "\n")
+#             f.write(f"分析时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+#             f.write(f"总股票数量: {original_count} (沪深: 持续五年盈利， 平均ROE大于3% )  \n")
+#             f.write(f"筛选后股票数量: {len(enhanced_data)} (市盈率 小于 200 ; 股息率 大于 0.1% ;  市净率 小于33  ) \n")   
+#             f.write(f"输出排名1500只股票\n")
+#             f.write("=" * 80 + "\n\n")
             
-            # 写入表头
-            f.write("排名,代码,公司名称,行业,ROE20年报,ROE21年报,ROE22年报,ROE23年报,ROE24年报,ROE25半年报,,平均ROE,,市盈率动,,股息率TTM,,市净率,,性价比\n")
+#             # 写入表头
+#             f.write("排名,代码,公司名称,行业,ROE20年报,ROE21年报,ROE22年报,ROE23年报,ROE24年报,ROE25半年报,,平均ROE,,市盈率动,,股息率TTM,,市净率,,性价比\n")
             
-            # 写入前1500个结果
-            for i, (code, value_ratio) in enumerate(sorted_stocks[:1500]):
-                if code in enhanced_data:
-                    data = enhanced_data[code]
-                    company_name = data[11] if len(data) > 11 else "未知公司"
-                    company_hangye = get_hangye(code)
+#             # 写入前1500个结果
+#             for i, (code, value_ratio) in enumerate(sorted_stocks[:1500]):
+#                 if code in enhanced_data:
+#                     data = enhanced_data[code]
+#                     company_name = data[11] if len(data) > 11 else "未知公司"
+#                     company_hangye = get_hangye(code)
                     
-                    # 格式化数据行
-                    row_data = [
-                        f"{i+1}",  # 排名
-                        "'"+str(code),  # 代码
-                        str(company_name),  # 公司名称
-                        str(company_hangye),  # 公司行业
-                        *[f"{x:.2f}" if not np.isnan(x) else "NaN" for x in data[:6]],  # ROE2020-ROE2024 + 2025
-                        f"平均,{data[6]:.2f}" if not np.isnan(data[6]) else "NaN",  # 平均ROE
-                        f"市盈,{data[7]:.2f}" if not np.isnan(data[7]) else "NaN",  # 市盈率
-                        f"股息,{data[8]:.2f}" if not np.isnan(data[8]) else "NaN",  # 股息率
-                        f"市净,{data[9]:.2f}" if not np.isnan(data[9]) else "NaN",  # 市净率
-                        f"价值,{data[10]:.3f}" if not np.isnan(data[10]) else "NaN"   # 性价比
-                    ]
+#                     # 格式化数据行
+#                     row_data = [
+#                         f"{i+1}",  # 排名
+#                         "'"+str(code),  # 代码
+#                         str(company_name),  # 公司名称
+#                         str(company_hangye),  # 公司行业
+#                         *[f"{x:.2f}" if not np.isnan(x) else "NaN" for x in data[:6]],  # ROE2020-ROE2024 + 2025
+#                         f"平均,{data[6]:.2f}" if not np.isnan(data[6]) else "NaN",  # 平均ROE
+#                         f"市盈,{data[7]:.2f}" if not np.isnan(data[7]) else "NaN",  # 市盈率
+#                         f"股息,{data[8]:.2f}" if not np.isnan(data[8]) else "NaN",  # 股息率
+#                         f"市净,{data[9]:.2f}" if not np.isnan(data[9]) else "NaN",  # 市净率
+#                         f"价值,{data[10]:.3f}" if not np.isnan(data[10]) else "NaN"   # 性价比
+#                     ]
                     
-                    # 写入文件
-                    f.write(",".join(row_data) + "\n")
+#                     # 写入文件
+#                     f.write(",".join(row_data) + "\n")
         
-        print(f"\n结果已保存到文件: {output_filename}")
+#         print(f"\n结果已保存到文件: {output_filename}")
+
+        
+if __name__ == "__main__":
+    output_filename = "stock_analysis_results.txt"    
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        f.write(f"分析时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"输出排名1500只股票\n")
+    print(f"\n结果已保存到文件: {output_filename}")
