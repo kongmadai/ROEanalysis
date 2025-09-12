@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest # 使用最新版本的Ubuntu运行器
 
     steps:
+    
+    - name: Get current date
+      id: get-date
+      run: echo "date=$(date -u +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    
     # 1. 检出仓库代码
     - name: Checkout code
       uses: actions/checkout@v4
@@ -66,15 +71,13 @@ jobs:
       if: success() # 只有Python脚本成功运行时才创建Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: roe-results-$(date -u +"%Y-%m-%d")
-        name: ROE分析结果 $(date -u +"%Y-%m-%d")
+        tag_name: roe-results-${{ github.run_id }}  # 使用唯一运行ID作为标签
+        name: ROE分析结果 (${{ steps.get-date.outputs.date }})  # 使用可读的日期作为Release名称
         files: stock_analysis_results.txt
         body: |
           自动生成的ROE股票分析结果
-          
-          **生成时间**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          **分析周期**: 每周定期更新
-          
+          生成时间: ${{ steps.get-date.outputs.date }}
+          分析周期: 每周定期更新
           包含沪深市场ROE筛选的优质股票列表，按性价比排序。
         # overwrite: true # 允许覆盖同标签的Release
         draft: false
