@@ -82,8 +82,8 @@ def get_multi_year_ROE():
     dict: 股票代码为key，ROE列表为value的字典
     """
     # 定义要获取的年份列表
-    years = ["20201231", "20211231", "20221231", "20231231", "20241231", "20250630"]
-    
+    # years = ["20201231", "20211231", "20221231", "20231231", "20241231", "20250630"]
+    years = ["20201231", "20211231", "20221231", "20231231", "20241231", "20250930"]
     # 获取各年份的ROE数据
     roe_data_by_year = {}
     for year in years:
@@ -112,8 +112,8 @@ def get_multi_year_ROE():
             else:
                 roe_list.append(np.nan)  # 用NaN代替缺失数据
                 
-        #修正第六个:半年报
-        roe_list[-1] = roe_list[-1] / 2 * 4
+        #修正第六个:半年报  三季度
+        roe_list[-1] = roe_list[-1] / 3 * 4
         
         # 计算平均值（忽略NaN）
         valid_values = [x for x in roe_list if not np.isnan(x)]
